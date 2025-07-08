@@ -1,0 +1,219 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRSET Solutions - Exemplo de Integração</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .product-card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+            background: #fafafa;
+        }
+        .btn {
+            background: #007bff;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+        .btn-success {
+            background: #28a745;
+        }
+        .btn-success:hover {
+            background: #1e7e34;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .code-block {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏦 CRSET Solutions</h1>
+            <h2>Exemplo de Integração Stripe</h2>
+            <p>Demonstração dos endpoints de faturação</p>
+        </div>
+
+        <div id="status"></div>
+
+        <div class="product-card">
+            <h3>💼 Consultoria Financeira CRSET</h3>
+            <p>Serviço de consultoria financeira personalizada</p>
+            <p><strong>Valor:</strong> R$ 100,00</p>
+            <button class="btn" onclick="createCheckout('Consultoria Financeira CRSET', 10000)">
+                Contratar Serviço
+            </button>
+        </div>
+
+        <div class="product-card">
+            <h3>📊 Análise de Investimentos</h3>
+            <p>Análise completa de portfólio de investimentos</p>
+            <p><strong>Valor:</strong> R$ 250,00</p>
+            <button class="btn" onclick="createCheckout('Análise de Investimentos', 25000)">
+                Solicitar Análise
+            </button>
+        </div>
+
+        <div class="product-card">
+            <h3>🔧 Testes de API</h3>
+            <p>Testar endpoints do backend</p>
+            <button class="btn btn-success" onclick="testHealth()">Testar Health</button>
+            <button class="btn btn-success" onclick="testProducts()">Listar Produtos</button>
+            <button class="btn btn-success" onclick="testSession()">Verificar Sessão</button>
+        </div>
+
+        <div id="response" class="code-block" style="display: none;"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8002'; // Alterar para URL de produção
+
+        function showStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+            setTimeout(() => {
+                statusDiv.innerHTML = '';
+            }, 5000);
+        }
+
+        function showResponse(data) {
+            const responseDiv = document.getElementById('response');
+            responseDiv.style.display = 'block';
+            responseDiv.innerHTML = JSON.stringify(data, null, 2);
+        }
+
+        async function createCheckout(productName, priceAmount) {
+            try {
+                showStatus('Criando sessão de checkout...', 'info');
+                
+                const response = await fetch(`${API_BASE}/create-checkout-session`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        product_name: productName,
+                        price_amount: priceAmount,
+                        currency: 'brl',
+                        quantity: 1
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showStatus(`✅ Sessão criada! ID: ${data.session_id}`, 'success');
+                    showResponse(data);
+                    
+                    // Em produção, redirecionar para o checkout
+                    // window.location.href = data.checkout_url;
+                    
+                    // Para demonstração, apenas mostrar a URL
+                    setTimeout(() => {
+                        alert(`Em produção, o usuário seria redirecionado para:\n${data.checkout_url}`);
+                    }, 1000);
+                } else {
+                    showStatus(`❌ Erro: ${data.detail}`, 'error');
+                    showResponse(data);
+                }
+            } catch (error) {
+                showStatus(`❌ Erro de conexão: ${error.message}`, 'error');
+                console.error('Erro:', error);
+            }
+        }
+
+        async function testHealth() {
+            try {
+                const response = await fetch(`${API_BASE}/health`);
+                const data = await response.json();
+                showStatus('✅ Health check realizado', 'success');
+                showResponse(data);
+            } catch (error) {
+                showStatus(`❌ Erro: ${error.message}`, 'error');
+            }
+        }
+
+        async function testProducts() {
+            try {
+                const response = await fetch(`${API_BASE}/products`);
+                const data = await response.json();
+                showStatus('✅ Produtos listados', 'success');
+                showResponse(data);
+            } catch (error) {
+                showStatus(`❌ Erro: ${error.message}`, 'error');
+            }
+        }
+
+        async function testSession() {
+            try {
+                const response = await fetch(`${API_BASE}/checkout-session/cs_test_example`);
+                const data = await response.json();
+                showStatus('✅ Sessão verificada', 'success');
+                showResponse(data);
+            } catch (error) {
+                showStatus(`❌ Erro: ${error.message}`, 'error');
+            }
+        }
+
+        // Verificar status do backend ao carregar
+        window.onload = function() {
+            testHealth();
+        };
+    </script>
+</body>
+</html>
